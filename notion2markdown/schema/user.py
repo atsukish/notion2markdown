@@ -1,23 +1,20 @@
-"""https://developers.notion.com/reference/user"""
+"""user object https://developers.notion.com/reference/user"""
 
-from typing import Any, Optional
+from typing import Optional
 
 from pydantic import BaseModel
 
 
 class User(BaseModel):
-    object: str
-    id_: str
-    type_: Optional[str] = None
-    name: Optional[str] = None
-    avatar_url: Optional[str] = None
+    """User object"""
 
-    @classmethod
-    def load(cls, params: dict[str, Any]) -> "User":
-        return cls(
-            object=params["object"],
-            id_=params["id"],
-            type_=params.get("type"),
-            name=params.get("name"),
-            avatar_url=params.get("avatar_url"),
-        )
+    object: str
+    """object"""
+    id: str
+    """user id"""
+    type: Optional[str] = None
+    """user type"""
+    name: Optional[str] = None
+    """user name"""
+    avatar_url: Optional[str] = None
+    """avator url"""

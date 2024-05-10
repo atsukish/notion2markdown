@@ -1,3 +1,5 @@
+"""utils"""
+
 from pathlib import Path
 
 import requests
@@ -5,6 +7,15 @@ from bs4 import BeautifulSoup
 
 
 def get_page_tag(url: str, html_tag: str) -> str:
+    """Get html page tag
+
+    Args:
+        url (str): url
+        html_tag (str): html tag
+
+    Returns:
+        str: tag
+    """
     req = requests.get(url, timeout=10)
     tag = BeautifulSoup(req.text, "html.parser").find(html_tag).get_text()
     return str(tag)
@@ -15,7 +26,13 @@ def download_image(
     dirpath: Path,
     filename: str = "Untitled",
 ) -> None:
+    """Download image file
 
+    Args:
+        url (str): image url
+        dirpath (Path): download dir path
+        filename (str, optional): filename. Defaults to "Untitled".
+    """
     dirpath.mkdir(exist_ok=True, parents=True)
 
     response = requests.get(url, timeout=10)

@@ -4,7 +4,7 @@ from enum import Enum
 
 
 class BlockType(str, Enum):
-    """block type"""
+    """Block type"""
 
     bookmark = "bookmark"
     breadcrumb = "breadcrumb"

@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Optional, Union
 
 import click
 from notion_client import Client
@@ -14,14 +14,11 @@ from notion2markdown.schema.block.block import (
     BaseTextObject,
     Block,
     Bookmark,
-    BulletedListItem,
     Callout,
-    ChildDatabase,
     ChildPage,
     Code,
     Embed,
     File,
-    Heading,
     Image,
     RichText,
     TableRows,
@@ -50,6 +47,7 @@ class NotionPageMarkdownReader:
 
     @property
     def client(self) -> Client:
+        """Notion Client"""
         return Client(auth=self.token)
 
     def add_block_style(
@@ -58,13 +56,15 @@ class NotionPageMarkdownReader:
         block_obj: BaseTextObject,
         text: str,
     ) -> str:
-        """ブロックスタイル適用
+        """Add block style
 
         Args:
-            block_obj (dict[str, Any]): _description_
+            block_type (str): block type
+            block_obj (BaseTextObject): Block object
+            text (str): text
 
         Returns:
-            str: _description_
+            str: styled block
         """
         if block_type == "heading_1":
             return md.heading1(text)
@@ -102,11 +102,11 @@ class NotionPageMarkdownReader:
         text: str,
         annotations: Annotations,
     ) -> str:
-        """テキストスタイルを適用
+        """Add text annotation
 
         Args:
-            text (str): テキスト
-            annotations (dict[str, bool]): テキストスタイル
+            text (str): text
+            annotations (dict[str, bool]): text style
 
         Returns:
             str: テキスト
@@ -124,11 +124,11 @@ class NotionPageMarkdownReader:
         return text
 
     def add_link(self, text: str, href: Optional[str] = None) -> str:
-        """リンク付与
+        """Add link
 
         Args:
-            text (str): テキスト
-            href (Optional[str], optional): リンクURL. Defaults to None.
+            text (str): text
+            href (Optional[str], optional): link url. Defaults to None.
 
         Returns:
             str: リンク付与後のテキスト
@@ -138,13 +138,13 @@ class NotionPageMarkdownReader:
         return text
 
     def add_block_text_style(self, rich_texts: list[RichText]) -> str:
-        """ブロック文字列スタイル適用
+        """Block text style
 
         Args:
-            rich_texts (list[RichText]): ブロック内のRichTextリスト
+            rich_texts (list[RichText]): rich text list
 
         Returns:
-            str: スタイル適用後の文字列
+            str: styled text
         """
         block_text = ""
         for text in rich_texts:
@@ -164,12 +164,13 @@ class NotionPageMarkdownReader:
         indent: int = 0,
         indent_spaces: int = 2,
     ) -> str:
-        """インデントスペースを付与
+        """Add indent space
 
         Args:
-            text (str): テキスト
-            indent (int, optional): インデントサイズ. Defaults to 0.
-            indent_spaces (int, optional): インデントスペース数. Defaults to 2.
+            text (str): text
+            indent (int, optional): indent size. Defaults to 0.
+            indent_spaces (int, optional): \
+                number of indent space. Defaults to 2.
 
         Returns:
             str: インデント付与後のテキスト
@@ -181,6 +182,15 @@ class NotionPageMarkdownReader:
             return tab * indent + text
 
     def block_to_markdown(self, block_id: str, indent: int = 0) -> str:
+        """Notion block to markdown
+
+        Args:
+            block_id (str): block id
+            indent (int, optional): block indent. Defaults to 0.
+
+        Returns:
+            str: markdown string
+        """
         blocks = Block.retrieve_children_blocks(
             notion_client=self.client,
             block_id=block_id,
@@ -192,7 +202,7 @@ class NotionPageMarkdownReader:
 
             block_text = ""
 
-            if block.type_ == "image":
+            if block.type == "image":
                 image_obj: Image = block.obj  # type:ignore
                 caption = (
                     self.add_block_text_style(image_obj.caption)
@@ -201,7 +211,7 @@ class NotionPageMarkdownReader:
                 )
                 block_text += md.image(alt=caption, href=image_obj.file.url)
 
-            elif block.type_ == "pdf":
+            elif block.type == "pdf":
                 pdf_obj: PDF = block.obj  # type:ignore
                 caption = (
                     self.add_block_text_style(pdf_obj.caption)
@@ -210,17 +220,17 @@ class NotionPageMarkdownReader:
                 )
                 block_text += md.link(text=caption, href=pdf_obj.file.url)
 
-            elif block.type_ == "divider":
+            elif block.type == "divider":
                 block_text += md.divider()
 
-            elif block.type_ == "file":
+            elif block.type == "file":
                 file_obj: File = block.obj  # type:ignore
                 block_text += md.link(
                     text=file_obj.name,
                     href=file_obj.file.url,
                 )
 
-            elif block.type_ == "video":
+            elif block.type == "video":
                 video_obj: Video = block.obj  # type:ignore
                 title = get_page_tag(video_obj.url, html_tag="title")
                 block_text += md.link(
@@ -228,7 +238,7 @@ class NotionPageMarkdownReader:
                     href=video_obj.url,
                 )
 
-            elif block.type_ in [
+            elif block.type in [
                 "bookmark",
                 "embed",
                 # "link_preview",
@@ -238,7 +248,7 @@ class NotionPageMarkdownReader:
                 title = get_page_tag(video_obj.url, html_tag="title")
                 block_text += md.link(text=title, href=link_obj.url)
 
-            elif block.type_ == "child_page":
+            elif block.type == "child_page":
                 child_page_obj: ChildPage = block.obj  # type:ignore
                 child_page = Page.retrieve_page(
                     notion_client=self.client,
@@ -249,7 +259,7 @@ class NotionPageMarkdownReader:
                     href=child_page.url,
                 )
 
-            elif block.type_ == "table":
+            elif block.type == "table":
                 table_rows = Block.retrieve_children_blocks(
                     notion_client=self.client,
                     block_id=block.id_,
@@ -270,7 +280,7 @@ class NotionPageMarkdownReader:
                     headers=table_list[0],
                 )
 
-            elif block.type_ in [
+            elif block.type in [
                 "paragraph",
                 "heading_1",
                 "heading_2",
@@ -288,7 +298,7 @@ class NotionPageMarkdownReader:
 
                 block_text = self.add_block_text_style(text_obj.rich_text)
                 block_text = self.add_block_style(
-                    block.type_,
+                    block.type,
                     text_obj,
                     block_text,
                 )
@@ -299,7 +309,7 @@ class NotionPageMarkdownReader:
             block_text = self.add_indent_space(block_text, indent=indent)
             blocks_text_list.append(block_text)
 
-            if block.has_children and block.type_ != "child_page":
+            if block.has_children and block.type != "child_page":
                 blocks_text_list.append(
                     self.block_to_markdown(
                         block_id=block.id_,
@@ -310,7 +320,14 @@ class NotionPageMarkdownReader:
         return "\n".join(blocks_text_list)
 
     def page_to_markdown(self, page_id: str) -> str:
-        """Read a page."""
+        """Notion page to Markdown
+
+        Args:
+            page_id (str): page id
+
+        Returns:
+            str: markdown string
+        """
         page = Page.retrieve_page(self.client, page_id=page_id)
 
         text = self.block_to_markdown(block_id=page_id)

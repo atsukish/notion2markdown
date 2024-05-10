@@ -21,6 +21,7 @@ class PageObject(str, Enum):
 
 
 class Page(BaseModel):
+    """Page Object"""
 
     object: PageObject
     id: str
@@ -37,18 +38,28 @@ class Page(BaseModel):
     public_url: Optional[str] = None
 
     @classmethod
-    def load(cls, response: dict[str, Any]) -> "Page":
+    def from_notion(cls, response: dict[str, Any]) -> "Page":
+        """Load page object
+
+        Args:
+            response (dict[str, Any]): params
+
+        Returns:
+            Page: page object
+        """
         icon_param = response["icon"]
         icon_obj: Optional[Union[Emoji, FileObject]] = None
         if icon_param is not None:
             icon_obj = (
-                Emoji.load(icon_param)
+                Emoji(**icon_param)
                 if icon_param["type"] == "emoji"
-                else FileObject.load(icon_param)
+                else FileObject.from_notion(icon_param)
             )
         cover_param = response["cover"]
         cover_obj = (
-            None if cover_param is None else FileObject.load(cover_param)
+            None
+            if cover_param is None
+            else FileObject.from_notion(cover_param)
         )
 
         return cls(
@@ -62,18 +73,27 @@ class Page(BaseModel):
                 response["last_edited_time"],
                 "%Y-%m-%dT%H:%M:%S.%fZ",
             ),
-            created_by=User.load(response["created_by"]),
-            last_edited_by=User.load(response["last_edited_by"]),
+            created_by=User(**response["created_by"]),
+            last_edited_by=User(**response["last_edited_by"]),
             archived=response["archived"],
             icon=icon_obj,
             cover=cover_obj,
-            properties=PageProperty.load(response["properties"]),
-            parent=Parent.load(response["parent"]),
+            properties=PageProperty.from_notion(response["properties"]),
+            parent=Parent.from_notion(response["parent"]),
             url=response["url"],
             public_url=response["public_url"],
         )
 
     @classmethod
     def retrieve_page(cls, notion_client: Client, page_id: str) -> "Page":
+        """From retrieve page
+
+        Args:
+            notion_client (Client): notion client
+            page_id (str): page id
+
+        Returns:
+            Page: Page object
+        """
         page = notion_client.pages.retrieve(page_id=page_id)
-        return Page.load(page)  # type: ignore
+        return Page.from_notion(page)  # type: ignore

@@ -263,7 +263,8 @@ def table(data: list[list[str]], headers: list[str]) -> str:
     """table
 
     Args:
-        cells (list[list[str]]): cells
+        data (list[list[str]]): cells
+        headers (list[str]): header
 
     Returns:
         str: table

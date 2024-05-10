@@ -1,7 +1,11 @@
+"""color of content"""
+
 from enum import Enum
 
 
 class Color(str, Enum):
+    """color type"""
+
     blue = "blue"
     blue_background = "blue_background"
     brown = "brown"

@@ -16,10 +16,13 @@ from notion2markdown.schema.user import User
 
 
 class BaseBlockObject(BaseModel):
+    """Base block object"""
+
     pass
 
 
 class Block(BaseModel):
+    """Block object"""
 
     object: str
     id_: str
@@ -30,22 +33,32 @@ class Block(BaseModel):
     last_edited_by: User
     has_children: bool
     archived: bool
-    type_: BlockType
+    type: BlockType
     obj: Union[BaseBlockObject, FileObject]
 
     @classmethod
-    def load(cls, response: dict[str, Any]) -> "Block":
-        type_ = response["type"]
+    def from_notion(cls, response: dict[str, Any]) -> "Block":
+        """From Notion response
+
+        Args:
+            response (dict[str, Any]): response params
+
+        Returns:
+            Block: block object
+        """
+        _type = response["type"]
 
         block_obj = BlockFactory.create_block(
-            type_=type_,
-            params=response[type_],
+            type=_type,
+            params=response[_type],
         )
+
+        print(type(block_obj))
 
         return cls(
             object=response["object"],
             id_=response["id"],
-            parent=Parent.load(response["parent"]),
+            parent=Parent.from_notion(response["parent"]),
             create_time=datetime.strptime(
                 response["created_time"],
                 "%Y-%m-%dT%H:%M:%S.%fZ",
@@ -54,11 +67,11 @@ class Block(BaseModel):
                 response["last_edited_time"],
                 "%Y-%m-%dT%H:%M:%S.%fZ",
             ),
-            created_by=User.load(response["created_by"]),
-            last_edited_by=User.load(response["last_edited_by"]),
+            created_by=User(**response["created_by"]),
+            last_edited_by=User(**response["last_edited_by"]),
             has_children=response["has_children"],
             archived=response["archived"],
-            type_=type_,
+            type=_type,
             obj=block_obj,
         )
 
@@ -68,8 +81,17 @@ class Block(BaseModel):
         notion_client: Client,
         block_id: str,
     ) -> "Block":
+        """Retrieve block
+
+        Args:
+            notion_client (Client): notion client
+            block_id (str): block id
+
+        Returns:
+            Block: block object
+        """
         blocks = notion_client.blocks.retrieve(block_id=block_id)
-        return cls.load(blocks)  # type: ignore
+        return cls.from_notion(blocks)  # type: ignore
 
     @classmethod
     def retrieve_children_blocks(
@@ -77,8 +99,13 @@ class Block(BaseModel):
         notion_client: Client,
         block_id: str,
     ) -> list["Block"]:
+        """_summary_
+
+        Returns:
+             list[Block]: children block list
+        """
         blocks = notion_client.blocks.children.list(block_id=block_id)
-        return [Block.load(b) for b in blocks["results"]]  # type: ignore
+        return [Block.from_notion(b) for b in blocks["results"]]  # type: ignore
 
 
 class BaseTextObject(BaseBlockObject):
@@ -90,9 +117,9 @@ class Bookmark(BaseBlockObject):
     url: str
 
     @classmethod
-    def load(cls, params: dict[str, Any]) -> "Bookmark":
+    def from_notion(cls, params: dict[str, Any]) -> "Bookmark":
         return cls(
-            caption=[RichText.load(text) for text in params["caption"]],
+            caption=[RichText.from_notion(text) for text in params["caption"]],
             url=params["url"],
         )
 
@@ -102,11 +129,13 @@ class BulletedListItem(BaseTextObject):
     # children: list[Block]
 
     @classmethod
-    def load(cls, params: dict[str, Any]) -> "BulletedListItem":
+    def from_notion(cls, params: dict[str, Any]) -> "BulletedListItem":
         return cls(
-            rich_text=[RichText.load(text) for text in params["rich_text"]],
+            rich_text=[
+                RichText.from_notion(text) for text in params["rich_text"]
+            ],
             color=params["color"],
-            # children=[Block.load(child) for child in params["children"]],
+            # children=[Block.from_notion(child) for child in params["children"]],
         )
 
 
@@ -115,10 +144,12 @@ class Callout(BaseTextObject):
     color: Color
 
     @classmethod
-    def load(cls, params: dict[str, Any]) -> "Callout":
+    def from_notion(cls, params: dict[str, Any]) -> "Callout":
         return cls(
-            rich_text=[RichText.load(text) for text in params["rich_text"]],
-            icon=Emoji.load(params["icon"]),
+            rich_text=[
+                RichText.from_notion(text) for text in params["rich_text"]
+            ],
+            icon=Emoji(**params["icon"]),
             color=params["color"],
         )
 
@@ -127,7 +158,7 @@ class ChildDatabase(BaseBlockObject):
     title: str
 
     @classmethod
-    def load(cls, params: dict[str, Any]) -> "ChildDatabase":
+    def from_notion(cls, params: dict[str, Any]) -> "ChildDatabase":
         return cls(title=params["title"])
 
 
@@ -135,7 +166,7 @@ class ChildPage(BaseBlockObject):
     title: str
 
     @classmethod
-    def load(cls, params: dict[str, Any]) -> "ChildPage":
+    def from_notion(cls, params: dict[str, Any]) -> "ChildPage":
         return cls(title=params["title"])
 
 
@@ -144,10 +175,14 @@ class Code(BaseTextObject):
     language: str
 
     @classmethod
-    def load(cls, params: dict[str, Any]) -> "Code":
+    def from_notion(cls, params: dict[str, Any]) -> "Code":
         return cls(
-            caption=[RichText.load(caption) for caption in params["caption"]],
-            rich_text=[RichText.load(text) for text in params["rich_text"]],
+            caption=[
+                RichText.from_notion(caption) for caption in params["caption"]
+            ],
+            rich_text=[
+                RichText.from_notion(text) for text in params["rich_text"]
+            ],
             language=params["language"],
         )
 
@@ -165,9 +200,11 @@ class Embed(BaseBlockObject):
     url: str
 
     @classmethod
-    def load(cls, params: dict[str, Any]) -> "Embed":
+    def from_notion(cls, params: dict[str, Any]) -> "Embed":
         return cls(
-            caption=[RichText.load(caption) for caption in params["caption"]],
+            caption=[
+                RichText.from_notion(caption) for caption in params["caption"]
+            ],
             url=params["url"],
         )
 
@@ -176,7 +213,7 @@ class Equation(BaseBlockObject):
     expression: str
 
     @classmethod
-    def load(cls, params: dict[str, Any]) -> "Equation":
+    def from_notion(cls, params: dict[str, Any]) -> "Equation":
         return cls(expression=params["expression"])
 
 
@@ -187,11 +224,11 @@ class File(BaseBlockObject):
     name: str
 
     @classmethod
-    def load(cls, params: dict[str, Any]) -> "File":
+    def from_notion(cls, params: dict[str, Any]) -> "File":
         return cls(
-            caption=[RichText.load(text) for text in params["caption"]],
+            caption=[RichText.from_notion(text) for text in params["caption"]],
             type=params["type"],
-            file=FileObject.load(params),
+            file=FileObject.from_notion(params),
             name=params["name"],
         )
 
@@ -201,9 +238,11 @@ class Heading(BaseTextObject):
     is_toggleable: bool
 
     @classmethod
-    def load(cls, params: dict[str, Any]) -> "Heading":
+    def from_notion(cls, params: dict[str, Any]) -> "Heading":
         return cls(
-            rich_text=[RichText.load(text) for text in params["rich_text"]],
+            rich_text=[
+                RichText.from_notion(text) for text in params["rich_text"]
+            ],
             color=params["color"],
             is_toggleable=params["is_toggleable"],
         )
@@ -215,11 +254,11 @@ class Image(BaseBlockObject):
     file: FileObject
 
     @classmethod
-    def load(cls, params: dict[str, Any]) -> "Image":
+    def from_notion(cls, params: dict[str, Any]) -> "Image":
         return cls(
-            caption=[RichText.load(text) for text in params["caption"]],
+            caption=[RichText.from_notion(text) for text in params["caption"]],
             type=params["type"],
-            file=FileObject.load(params),
+            file=FileObject.from_notion(params),
         )
 
 
@@ -244,9 +283,11 @@ class SyncedBlock(BaseBlockObject):
     children: list[Block]
 
     @classmethod
-    def load(cls, params: dict[str, Any]) -> "SyncedBlock":
+    def from_notion(cls, params: dict[str, Any]) -> "SyncedBlock":
         return cls(
-            children=[Block.load(child) for child in params["children"]],
+            children=[
+                Block.from_notion(child) for child in params["children"]
+            ],
         )
 
 
@@ -256,7 +297,7 @@ class Table(BaseBlockObject):
     has_row_header: bool
 
     @classmethod
-    def load(cls, params: dict[str, Any]) -> "Table":
+    def from_notion(cls, params: dict[str, Any]) -> "Table":
         return cls(
             table_width=params["table_width"],
             has_column_header=params["has_column_header"],
@@ -268,14 +309,14 @@ class TableRows(BaseBlockObject):
     cells: list[list[RichText]]
 
     @classmethod
-    def load(cls, params: dict[str, Any]) -> "TableRows":
+    def from_notion(cls, params: dict[str, Any]) -> "TableRows":
         cells = []
         for cell in params["cells"]:
             rows = []
             if len(cell) == 0:
                 rows.append(RichText.default_text())
             for text in cell:
-                rows.append(RichText.load(text))
+                rows.append(RichText.from_notion(text))
             cells.append(rows)
         return cls(cells=cells)
 
@@ -284,7 +325,7 @@ class TableContents(BaseBlockObject):
     color: Color
 
     @classmethod
-    def load(cls, params: dict[str, Any]) -> "TableContents":
+    def from_notion(cls, params: dict[str, Any]) -> "TableContents":
         return cls(color=params["color"])
 
 
@@ -293,9 +334,11 @@ class ToDo(BaseTextObject):
     color: Color
 
     @classmethod
-    def load(cls, params: dict[str, Any]) -> "ToDo":
+    def from_notion(cls, params: dict[str, Any]) -> "ToDo":
         return cls(
-            rich_text=[RichText.load(text) for text in params["rich_text"]],
+            rich_text=[
+                RichText.from_notion(text) for text in params["rich_text"]
+            ],
             checked=params.get("checked"),
             color=params["color"],
         )
@@ -343,10 +386,10 @@ class BlockFactory:
     }
 
     @staticmethod
-    def create_block(type_: str, params: dict[str, Any]):
-        block_class = BlockFactory.block_classes.get(type_, BaseBlockObject)
+    def create_block(type: str, params: dict[str, Any]) -> BaseBlockObject:
+        block_class = BlockFactory.block_classes.get(type, BaseBlockObject)
         return (
-            block_class.load(params)
-            if hasattr(block_class, "load")
+            block_class.from_notion(params)
+            if hasattr(block_class, "from_notion")
             else block_class()
         )

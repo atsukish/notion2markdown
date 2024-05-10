@@ -1,13 +1,12 @@
-from typing import Any
+"""emoji https://developers.notion.com/reference/emoji-object"""
 
 from pydantic import BaseModel
 
 
 class Emoji(BaseModel):
+    """Emoji object"""
 
-    type_: str
+    type: str
+    """type"""
     emoji: str
-
-    @classmethod
-    def load(cls, params: dict[str, Any]) -> "Emoji":
-        return cls(type_=params["type"], emoji=params["emoji"])
+    """emoji"""

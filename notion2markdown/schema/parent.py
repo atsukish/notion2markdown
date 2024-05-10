@@ -6,15 +6,24 @@ from pydantic import BaseModel
 
 
 class Parent(BaseModel):
-    type_: str
-    id_: Optional[str] = None
+    """Parent Object"""
+
+    type: str
+    id: Optional[str] = None
     workspace: Optional[bool] = None
 
     @classmethod
-    def load(cls, params: dict[str, Any]) -> "Parent":
+    def from_notion(cls, params: dict[str, Any]) -> "Parent":
+        """From Notion response
 
-        type_ = params["type"]
-        if type_ == "workspace":
-            return cls(type_=type_, workspace=params[type_])
+        Args:
+            params (dict[str, Any]): response params
+
+        Returns:
+            Parent: Parent
+        """
+        _type = params["type"]
+        if _type == "workspace":
+            return cls(type=_type, workspace=params[_type])
         else:
-            return cls(type_=type_, id_=params[type_])
+            return cls(type=_type, id=params[_type])

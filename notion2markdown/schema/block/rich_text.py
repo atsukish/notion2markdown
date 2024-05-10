@@ -1,3 +1,5 @@
+"""Rich Text"""
+
 from typing import Any, Optional, Union
 
 from pydantic import BaseModel, ConfigDict
@@ -13,28 +15,44 @@ from notion2markdown.schema.mention import (
 
 
 class Annotations(BaseModel):
+    """Annotations"""
+
     bold: bool = False
+    """bold"""
     italic: bool = False
+    """italic"""
     strikethrough: bool = False
+    """strikethrough"""
     underline: bool = False
+    """underline"""
     code: bool = False
+    """code"""
     color: str = "default"
+    """color"""
 
 
 class BaseText(BaseModel):
+    """Base Text"""
+
     pass
 
 
 class Equation(BaseText):
-    expression: str
+    """Equation"""
 
-    @classmethod
-    def load(cls, params: dict[str, Any]) -> "Equation":
-        return cls(expression=params["expression"])
+    expression: str
+    """expression"""
+
+    # @classmethod
+    # def from_notion(cls, params: dict[str, Any]) -> "Equation":
+    #     return cls(expression=params["expression"])
 
 
 class Mention(BaseText):
+    """Mention"""
+
     type: str
+    """type"""
     obj: Union[
         DatabaseMention,
         DateMention,
@@ -43,81 +61,108 @@ class Mention(BaseText):
         TemplateMention,
         UserMention,
     ]
+    """mention object"""
 
     @classmethod
-    def load(cls, params: dict[str, Any]) -> "Mention":
-        type_ = params["type"]
+    def from_notion(cls, params: dict[str, Any]) -> "Mention":
+        """Load Mention object
 
-        if type_ == "database":
+        Args:
+            params (dict[str, Any]): params
+
+        Returns:
+            Mention: Mention object
+        """
+        _type = params["type"]
+
+        if _type == "database":
             return cls(
-                type=type_,
-                obj=DatabaseMention.load(params[type_]),
+                type=_type,
+                obj=DatabaseMention(**params[_type]),
             )
-        elif type_ == "date":
+        elif _type == "date":
             return cls(
-                type=type_,
-                obj=DateMention.load(params[type_]),
+                type=_type,
+                obj=DateMention(**params[_type]),
             )
-        elif type_ == "link_preview":
+        elif _type == "link_preview":
             return cls(
-                type=type_,
-                obj=LinkPreviewMention.load(params[type_]),
+                type=_type,
+                obj=LinkPreviewMention(**params[_type]),
             )
-        elif type_ == "page":
+        elif _type == "page":
             return cls(
-                type=type_,
-                obj=PageMention.load(params[type_]),
+                type=_type,
+                obj=PageMention(**params[_type]),
             )
-        # elif type_ == "template_mention":
+        # elif _type == "template_mention":
         #    pass
-        elif type_ == "user":
+        elif _type == "user":
             return cls(
-                type=type_,
-                obj=UserMention.load(params[type_]),
+                type=_type,
+                obj=UserMention(**params[_type]),
             )
         else:
             return cls(
-                type=type_,
-                obj=TemplateMention.load(params[type_]),
+                type=_type,
+                obj=TemplateMention.from_notion(params[_type]),
             )
 
 
 class Text(BaseText):
-    content: str
-    link: Optional[dict] = None
+    """Text Object"""
 
-    @classmethod
-    def load(cls, params: dict[str, Any]) -> "Text":
-        return cls(
-            content=params["content"],
-            link=params.get("link"),
-        )
+    content: str
+    """text content"""
+    link: Optional[dict] = None
+    """link url"""
+
+    # @classmethod
+    # def from_notion(cls, params: dict[str, Any]) -> "Text":
+    #     return cls(
+    #         content=params["content"],
+    #         link=params.get("link"),
+    #     )
 
 
 class RichText(BaseModel):
+    """Rich text object"""
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    type_: str
+    type: str
+    """object type"""
     text_obj: Union[BaseText, Text, Equation, Mention]
+    """text object"""
     annotations: Annotations
+    """text annotations"""
     plain_text: str
+    """plain text"""
     href: Optional[str] = None
+    """href"""
 
     @classmethod
-    def load(cls, params: dict[str, Any]) -> "RichText":
+    def from_notion(cls, params: dict[str, Any]) -> "RichText":
+        """Load Rich text object
 
-        type_ = params["type"]
+        Args:
+            params (dict[str, Any]): params
+
+        Returns:
+            RichText: rich text object
+        """
+        _type = params["type"]
         text_obj: BaseText
 
-        if type_ == "text":
-            text_obj = Text.load(params[type_])
-        elif type_ == "equation":
-            text_obj = Equation.load(params[type_])
+        if _type == "text":
+            text_obj = Text(**params[_type])
+        elif _type == "equation":
+            text_obj = Equation(**params[_type])
         else:
-            text_obj = Mention.load(params[type_])
+            text_obj = Mention.from_notion(params[_type])
 
         return cls(
-            type_=type_,
+            type=_type,
             text_obj=text_obj,
             annotations=Annotations(**params["annotations"]),
             plain_text=params["plain_text"],
@@ -126,8 +171,13 @@ class RichText(BaseModel):
 
     @classmethod
     def default_text(cls) -> "RichText":
+        """Default text
+
+        Returns:
+            RichText: Default text
+        """
         return cls(
-            type_="text",
+            type="text",
             text_obj=Text(content="", link=None),
             annotations=Annotations(),
             plain_text="",
@@ -135,6 +185,11 @@ class RichText(BaseModel):
         )
 
     def get_content(self) -> str:
+        """Get text content
+
+        Returns:
+            str: text content
+        """
         if isinstance(self.text_obj, Text):
             return self.text_obj.content
         if isinstance(self.text_obj, Equation):

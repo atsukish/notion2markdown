@@ -1,67 +1,73 @@
-from typing import Any, Optional, Union
+"""mention https://developers.notion.com/reference/rich-text#mention"""
+
+from datetime import datetime
+from typing import Any, Optional
 
 from pydantic import BaseModel
 
 
 class BaseMention(BaseModel):
+    """Base mention model"""
+
     pass
 
 
 class DatabaseMention(BaseMention):
-    id_: str
+    """Database mention"""
 
-    @classmethod
-    def load(cls, params: dict[str, Any]) -> "DatabaseMention":
-        return cls(id_=params["id"])
+    id: str
 
 
 class DateMention(BaseMention):
-    start: Optional[str]
-    end: Optional[str]
-    time_zone: Optional[str]
+    """Date mention"""
 
-    @classmethod
-    def load(cls, params: dict[str, Any]) -> "DateMention":
-        return cls(
-            start=params.get("start"),
-            end=params.get("end"),
-            time_zone=params.get("time_zone"),
-        )
+    start: Optional[datetime] = None
+    end: Optional[datetime] = None
+    time_zone: Optional[str] = None
 
 
 class LinkPreviewMention(BaseMention):
+    """Link preview mention"""
+
     url: str
 
-    @classmethod
-    def load(cls, params: dict[str, Any]) -> "LinkPreviewMention":
-        return cls(url=params["url"])
 
+class PageMention(DatabaseMention):
+    """Page mention"""
 
-class PageMention(BaseMention):
-    id_: str
-
-    @classmethod
-    def load(cls, params: dict[str, Any]) -> "PageMention":
-        return cls(id_=params["id"])
+    pass
 
 
 class TemplateMention(BaseMention):
-    type_: str
+    """Template mention"""
+
+    type: str
     template_mention_date: Optional[str]
     template_mention_user: Optional[str]
 
     @classmethod
-    def load(cls, params: dict[str, Any]) -> "TemplateMention":
-        type_ = params["type"]
-        if type_ == "template_mention_date":
+    def from_notion(cls, params: dict[str, Any]) -> "TemplateMention":
+        """From notion response
+
+        Args:
+            params (dict[str, Any]): response params
+
+        Raises:
+            ValueError: TemplateMention is invalid
+
+        Returns:
+            TemplateMention: TemplateMention object
+        """
+        _type = params["type"]
+        if _type == "template_mention_date":
             return cls(
-                type_=params["type"],
+                type=_type,
                 template_mention_date=params["template_mention_date"],
                 template_mention_user=None,
             )
-        elif type_ == "template_mention_user":
+        elif _type == "template_mention_user":
             return cls(
-                type_=params["type"],
+                type=_type,
                 template_mention_date=None,
                 template_mention_user=params["template_mention_user"],
             )
@@ -70,9 +76,7 @@ class TemplateMention(BaseMention):
 
 
 class UserMention(BaseMention):
-    object: str
-    id_: str
+    """User mention"""
 
-    @classmethod
-    def load(cls, params: dict[str, Any]) -> "UserMention":
-        return cls(object=params["object"], id_=params["id"])
+    object: str
+    id: str
